@@ -1,0 +1,8 @@
+.git
+.idea
+.iml
+.ipr
+.iws
+build/
+target/
+out/
