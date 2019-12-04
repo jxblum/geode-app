@@ -28,16 +28,16 @@ import org.apache.geode.internal.cache.GemFireCacheImpl;
 @SuppressWarnings("unused")
 public class GeodeApplication implements Runnable {
 
-	private static final CacheType GEODE_CACHE_TYPE = CacheType.CLIENT;
+	static final CacheType GEODE_CACHE_TYPE = CacheType.CLIENT;
 
-	private static final ClientRegionShortcut CLIENT_REGION_SHORTCUT = ClientRegionShortcut.LOCAL;
+	static final ClientRegionShortcut CLIENT_REGION_SHORTCUT = ClientRegionShortcut.LOCAL;
 
-	private static final RegionShortcut PEER_REGION_SHORTCUT = RegionShortcut.PARTITION;
+	final RegionShortcut PEER_REGION_SHORTCUT = RegionShortcut.PARTITION;
 
-	private static final String GEODE_CACHE_NAME = GeodeApplication.class.getSimpleName();
-	private static final String GEODE_LOCATORS = "";
-	private static final String GEODE_LOG_LEVEL = "config";
-	private static final String GEODE_REGION_NAME = "Example";
+	static final String GEODE_CACHE_NAME = GeodeApplication.class.getSimpleName();
+	static final String GEODE_LOCATORS = "";
+	static final String GEODE_LOG_LEVEL = "config";
+	static final String GEODE_REGION_NAME = "Example";
 
 	public static void main(String[] args) {
 		new GeodeApplication(args).run();
