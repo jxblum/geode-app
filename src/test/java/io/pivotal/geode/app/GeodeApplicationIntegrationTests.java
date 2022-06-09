@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Optional;
 import java.util.function.Supplier;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import org.apache.geode.cache.CacheFactory;
 import org.apache.geode.cache.GemFireCache;
@@ -16,7 +16,7 @@ import org.apache.geode.cache.client.ClientCacheFactory;
  * Integration Tests for {@link GeodeApplication}.
  *
  * @author John Blum
- * @see org.junit.Test
+ * @see org.junit.jupiter.api.Test
  * @see org.apache.geode.cache.GemFireCache
  * @see org.apache.geode.cache.Region
  * @since 1.0.0

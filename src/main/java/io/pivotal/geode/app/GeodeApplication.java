@@ -46,7 +46,11 @@ public class GeodeApplication implements Runnable {
 	private final String[] arguments;
 
 	public GeodeApplication(String[] arguments) {
-		assertThat(arguments).isNotNull();
+
+		assertThat(arguments)
+			.describedAs("Program arguments are required")
+			.isNotNull();
+
 		this.arguments = arguments;
 	}
 
