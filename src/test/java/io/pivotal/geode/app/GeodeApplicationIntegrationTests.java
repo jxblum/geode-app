@@ -46,12 +46,12 @@ public class GeodeApplicationIntegrationTests {
 		GemFireCache cache = resolveCache();
 
 		assertThat(cache).isNotNull();
-		assertThat(cache.getName()).isEqualTo(GeodeApplication.GEODE_CACHE_NAME);
+		assertThat(cache.getName()).isEqualTo(GeodeApplication.class.getSimpleName());
 
-		Region<?, ?> region = cache.getRegion(GeodeApplication.GEODE_REGION_NAME);
+		Region<?, ?> region = cache.getRegion(GeodeApplication.REGION_NAME);
 
 		assertThat(region).isNotNull();
-		assertThat(region.getName()).isEqualTo(GeodeApplication.GEODE_REGION_NAME);
+		assertThat(region.getName()).isEqualTo(GeodeApplication.REGION_NAME);
 		assertThat(region.get(1)).isEqualTo("TEST");
 	}
 }

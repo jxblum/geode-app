@@ -2,7 +2,9 @@ package io.pivotal.geode.app;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDateTime;
 import java.util.Properties;
+import java.util.function.Function;
 
 import org.apache.geode.cache.Cache;
 import org.apache.geode.cache.CacheFactory;
@@ -12,7 +14,10 @@ import org.apache.geode.cache.RegionShortcut;
 import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.cache.client.ClientCacheFactory;
 import org.apache.geode.cache.client.ClientRegionShortcut;
+import org.apache.geode.cache.server.CacheServer;
 import org.apache.geode.internal.cache.GemFireCacheImpl;
+
+import io.pivotal.geode.app.support.GeodeApplicationSupport;
 
 /**
  * Example/Test Apache Geode application that creates and initialize an Apache Geode cache instance
@@ -26,18 +31,13 @@ import org.apache.geode.internal.cache.GemFireCacheImpl;
  * @since 1.0.0
  */
 @SuppressWarnings("unused")
-public class GeodeApplication implements Runnable {
+public class GeodeApplication extends GeodeApplicationSupport implements Runnable {
 
-	static final CacheType GEODE_CACHE_TYPE = CacheType.CLIENT;
+	private static final ClientRegionShortcut CLIENT_REGION_TYPE = resolveClientRegionType(ClientRegionShortcut.LOCAL);
 
-	static final ClientRegionShortcut CLIENT_REGION_SHORTCUT = ClientRegionShortcut.LOCAL;
+	private static final RegionShortcut PEER_REGION_SHORTCUT = resolvePeerRegionType(RegionShortcut.PARTITION);
 
-	final RegionShortcut PEER_REGION_SHORTCUT = RegionShortcut.PARTITION;
-
-	static final String GEODE_CACHE_NAME = GeodeApplication.class.getSimpleName();
-	static final String GEODE_LOCATORS = "";
-	static final String GEODE_LOG_LEVEL = "config";
-	static final String GEODE_REGION_NAME = "Example";
+	static final String REGION_NAME = "Example";
 
 	public static void main(String[] args) {
 		new GeodeApplication(args).run();
@@ -58,14 +58,6 @@ public class GeodeApplication implements Runnable {
 		return this.arguments;
 	}
 
-	protected void log(String message, Object... args) {
-
-		message = String.valueOf(message);
-		message = message.endsWith("%n") ? message : message + "%n";
-
-		System.err.printf(message, args);
-	}
-
 	public void run() {
 		run(getArguments());
 	}
@@ -74,10 +66,12 @@ public class GeodeApplication implements Runnable {
 
 		Object key = 1;
 
-		Region<Object, Object> example = newRegion(newCache(), GEODE_REGION_NAME);
+		GemFireCache cache = newCache();
+
+		Region<Object, Object> example = newRegion(cache, REGION_NAME);
 
 		assertThat(example).isNotNull();
-		assertThat(example.getName()).isEqualTo(GEODE_REGION_NAME);
+		assertThat(example.getName()).isEqualTo(REGION_NAME);
 		assertThat(example.get(key)).isNull();
 		assertThat(example.put(key, "TEST")).isNull();
 
@@ -90,61 +84,74 @@ public class GeodeApplication implements Runnable {
 	}
 
 	protected Properties gemfireProperties() {
+		return gemfireProperties(Function.identity());
+	}
+
+	protected Properties gemfireProperties(Function<Properties, Properties> gemfirePropertiesFunction) {
 
 		Properties gemfireProperties = new Properties();
 
-		gemfireProperties.setProperty("name", GEODE_CACHE_NAME);
-		gemfireProperties.setProperty("log-level", GEODE_LOG_LEVEL);
+		gemfireProperties.setProperty("name", resolveGeodeMemberName());
+		gemfireProperties.setProperty("log-level", resolveGeodeLogLevel());
 
-		return gemfireProperties;
+		return gemfirePropertiesFunction.apply(gemfireProperties);
+	}
+
+	protected String resolveGeodeMemberName() {
+		return String.format("%s-%s-%s", getClass().getSimpleName(), GEODE_CACHE_TYPE.name(),
+			LocalDateTime.now().format(TIMESTAMP_FORMATTER));
 	}
 
 	protected GemFireCache newCache() {
 
-		return CacheType.CLIENT.equals(GeodeApplication.GEODE_CACHE_TYPE)
-			? newClientCache(gemfireProperties())
-			: newPeerCache(gemfireProperties());
+		log("%s CACHE", GEODE_CACHE_TYPE);
+
+		return GEODE_CACHE_TYPE.isClient()
+			? newClientCache(gemfireProperties(gemfirePropertiesFunction()))
+			: newPeerCache(gemfireProperties(gemfirePropertiesFunction()));
 	}
 
 	protected ClientCache newClientCache(Properties gemfireProperties) {
-		log("CLIENT CACHE");
 		return new ClientCacheFactory(gemfireProperties).create();
 	}
 
 	protected Cache newPeerCache(Properties gemfireProperties) {
+		return addCacheServer(new CacheFactory(gemfireProperties).create());
+	}
 
-		log("PEER CACHE");
+	protected Cache addCacheServer(Cache cache) {
 
-		return new CacheFactory(gemfireProperties)
-			.set("locators", GEODE_LOCATORS)
-			.create();
+		CacheServer cacheServer = cache.addCacheServer();
+
+		cacheServer.setHostnameForClients("localhost");
+		cacheServer.setPort(resolveCacheServerPort());
+		runSafely(args -> { cacheServer.start(); return null; });
+
+		return cache;
 	}
 
 	private boolean isClient(GemFireCache cache) {
 
 		return cache instanceof GemFireCacheImpl
 			? ((GemFireCacheImpl) cache).isClient()
-			: CacheType.CLIENT.equals(GEODE_CACHE_TYPE);
+			: GEODE_CACHE_TYPE.isClient();
 	}
 
+	@SuppressWarnings("all")
 	protected <K, V> Region<K, V> newRegion(GemFireCache cache, String name) {
 
 		return isClient(cache)
-			? this.<K, V>newClientRegion(((ClientCache) cache), name)
-			: this.<K, V>newPeerRegion(((Cache) cache), name);
+			? this.newClientRegion(((ClientCache) cache), name)
+			: this.newPeerRegion(((Cache) cache), name);
 	}
 
 	protected <K, V> Region<K, V> newClientRegion(ClientCache clientCache, String name) {
 		log("CLIENT LOCAL REGION");
-		return clientCache.<K, V>createClientRegionFactory(CLIENT_REGION_SHORTCUT).create(name);
+		return clientCache.<K, V>createClientRegionFactory(CLIENT_REGION_TYPE).create(name);
 	}
 
 	protected <K, V> Region<K, V> newPeerRegion(Cache peerCache, String name) {
-		log("SERVER PARTITION REGION");
+		log("PEER PARTITION REGION");
 		return peerCache.<K, V>createRegionFactory(PEER_REGION_SHORTCUT).create(name);
-	}
-
-	protected enum CacheType {
-		CLIENT, PEER
 	}
 }
