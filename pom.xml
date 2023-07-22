@@ -44,7 +44,7 @@
   <properties>
     <java.version>17</java.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <apache-geode.version>1.14.3</apache-geode.version>
+    <apache-geode.version>1.15.1</apache-geode.version>
     <assertj.version>3.23.1</assertj.version>
     <junit.version>5.8.2</junit.version>
     <spring-shell.version>1.1.0.RELEASE</spring-shell.version>
